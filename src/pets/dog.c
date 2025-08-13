@@ -15,9 +15,19 @@ void createDog(Dog *dog, const char *name, int age, const char *color)
         return; // Handle error: invalid parameters
     }
 
-    dog->name = name;
+    dog->name = malloc(strlen(name) + 1);
     dog->age = age;
-    dog->color = color;
+    dog->color = malloc(strlen(color) + 1);
+
+    if (dog->name)
+    {
+        strcpy((char *)dog->name, name);
+    }
+
+    if (dog->color)
+    {
+        strcpy((char *)dog->color, color);
+    }
 
     // Initialize function reference table
     dog->funcRefTable = (PetFunctionRefTable *)malloc(sizeof(PetFunctionRefTable));

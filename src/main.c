@@ -112,12 +112,18 @@ static VOID fcntCallDtor(void)
 #define List(ftxt) ListviewObject, MUIA_Weight, 150, MUIA_Listview_Input, FALSE, MUIA_Listview_List, FloattextObject, MUIA_Frame, MUIV_Frame_ReadList, MUIA_Background, MUII_ReadListBack, MUIA_Floattext_Text, ftxt, MUIA_Floattext_TabSize, 4, MUIA_Floattext_Justify, TRUE, End, End
 #define TxtInput(ftxt) StringObject, StringFrame, MUIA_String_Contents, ftxt, MUIA_String_MaxLen, 100, End
 #define InvokeCreatePets 2
+#define InvokePatPets 3
 
 static APTR txt_dog_name, txt_dog_age, txt_dog_color;
 static APTR txt_cat_name, txt_cat_age, txt_cat_color;
 static APTR list, cm1, cm2;
+static void **cats;
+static void **dogs;
+static int catsCount = 0;
+static int dogsCount = 0;
 
-extern void createPets(void);
+void createPets(void);
+void patPets(void);
 // extern void createDog(Dog *dog, const char *name, int age, const char *color);
 
 // This function is based on the MUI example "ShowHide" which can be downloaded from https://github.com/amiga-mui/muidev/releases/tag/MUI-3.9-2015R1
@@ -195,7 +201,7 @@ void MUIShowHide(void)
                             End,
                             Child, HGroup,
                                 Child, LLabel("Create"),                                
-                                Child, cm1 = CheckMark(TRUE),
+                                Child, cm2 = CheckMark(TRUE),
                             End,  
                         End,                    
                 End,    
@@ -203,7 +209,7 @@ void MUIShowHide(void)
                 Child, VGroup, GroupFrameT("Actions"),                    
                     Child, HGroup,
                         Child, bt1 = SimpleButton("Create Pet(s)"),
-                        Child, bt2 = SimpleButton("Rub Pet(s)"),                        
+                        Child, bt2 = SimpleButton("Pat Pet(s)"),                        
                     End,
                     Child, list = List("Pet Feedback"),
                 End,                                
@@ -215,6 +221,7 @@ void MUIShowHide(void)
     DoMethod(window, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 
     DoMethod(bt1, MUIM_Notify, MUIA_Pressed, FALSE, app, 2, MUIM_Application_ReturnID, InvokeCreatePets);
+    DoMethod(bt2, MUIM_Notify, MUIA_Pressed, FALSE, app, 2, MUIM_Application_ReturnID, InvokePatPets);
     // DoMethod(cm2, MUIM_Notify, MUIA_Selected, MUIV_EveryTime, bt2, 3, MUIM_Set, MUIA_ShowMe, MUIV_TriggerValue);
 
     /*
@@ -250,6 +257,9 @@ void MUIShowHide(void)
                 break;
             case InvokeCreatePets:
                 createPets();
+                break;
+            case InvokePatPets:
+                patPets();
                 break;
             default:
                 break;
@@ -390,6 +400,23 @@ void createPets(void)
 {
     LONG isChecked = 0;
     get(cm1, MUIA_Selected, &isChecked);
+    if (dogs == NULL)
+    {
+        dogs = malloc(sizeof(void *) * 10); // Allocate space for 10 pets
+        if (dogs == NULL)
+        {
+            return; // Handle error: memory allocation failed
+        }
+    }
+
+    if (cats == NULL)
+    {
+        cats = malloc(sizeof(void *) * 10); // Allocate space for 10 pets
+        if (cats == NULL)
+        {
+            return; // Handle error: memory allocation failed
+        }
+    }
 
     if (isChecked)
     {
@@ -404,6 +431,7 @@ void createPets(void)
         if (dog)
         {
             createDog(dog, dogName, atoi(dogAge), dogColor);
+            dogs[dogsCount++] = dog; // Store the dog in the pets array
             // char response[100];
             // dog->funcRefTable->patAnimal(dog, &response);
             // DoMethod(list, MUIM_List_InsertSingle, response, MUIV_List_Insert_Bottom);
@@ -426,9 +454,52 @@ void createPets(void)
         if (cat)
         {
             createCat(cat, catName, atoi(catAge), catColor);
+            cats[catsCount++] = cat;
             // char response[100];
             // cat->funcRefTable->patAnimal(cat, &response);
             // DoMethod(list, MUIM_List_InsertSingle, response, MUIV_List_Insert_Bottom);
+        }
+    }
+}
+
+void patPets(void)
+{
+    if (dogs == NULL || dogsCount == 0)
+    {
+        DoMethod(list, MUIM_List_InsertSingle, "No dogs to pat!", MUIV_List_Insert_Bottom);
+    }
+
+    if (cats == NULL || catsCount == 0)
+    {
+        DoMethod(list, MUIM_List_InsertSingle, "No cats to pat!", MUIV_List_Insert_Bottom);
+    }
+
+    char response[100];
+    for (int i = 0; i < catsCount; i++)
+    {
+        if (cats[i] != NULL)
+        {
+            Cat *cat = (Cat *)cats[i];
+            PetFunctionRefTable *funcRefTable = cat->funcRefTable;
+            if (funcRefTable && funcRefTable->patAnimal)
+            {
+                funcRefTable->patAnimal(cat, response);
+                DoMethod(list, MUIM_List_InsertSingle, response, MUIV_List_Insert_Bottom);
+            }
+        }
+    }
+
+    for (int i = 0; i < dogsCount; i++)
+    {
+        if (dogs[i] != NULL)
+        {
+            Dog *dog = (Dog *)dogs[i];
+            PetFunctionRefTable *funcRefTable = dog->funcRefTable;
+            if (funcRefTable && funcRefTable->patAnimal)
+            {
+                funcRefTable->patAnimal(dog, response);
+                DoMethod(list, MUIM_List_InsertSingle, response, MUIV_List_Insert_Bottom);
+            }
         }
     }
 }
