@@ -8,11 +8,20 @@ ifdef OS
 endif
 
 subdirs := $(wildcard */)
+pets_subdir := src/pets/
 VPATH = $(subdirs)
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
 cpp_objects := $(addprefix obj/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
-c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs)))
-c_objects := $(addprefix obj/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
+$(info "suffix pets subdirs: $(addsuffix *.c,$(pets_subdir))")
+$(info "suffix sources: $(addsuffix *.c,$(subdirs))")
+c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs))) $(wildcard $(addsuffix *.c,$(pets_subdir))) 
+$(info "C subdirs: $(subdirs)")
+$(info "C pets subdir: $(pets_subdir)")
+$(info "C sources: $(c_sources)")
+#@echo "C sources: $(c_sources)"
+#c_objects := $(addprefix obj/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
+c_objects := $(patsubst %.c,obj/%.o,$(c_sources))
+$(info "C objects: $(c_objects)")
 # s_sources := support/gcc8_a_support.s support/depacker_doynax.s
 s_objects := $(addprefix obj/,$(patsubst %.s,%.o,$(notdir $(s_sources))))
 vasm_sources := $(wildcard *.asm) $(wildcard $(addsuffix *.asm, $(subdirs)))
@@ -68,13 +77,26 @@ endif
 
 -include $(objects:.o=.d)
 
+ifdef WINDOWS
+MKDIR = if not exist "$(subst /,\,$(dir $@))" mkdir "$(subst /,\,$(dir $@))"
+else
+MKDIR = mkdir -p $(dir $@)
+endif
+
+
 $(cpp_objects) : obj/%.o : %.cpp
 	$(info Compiling $<)
 	@$(CC) $(CPPFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(c_objects) : obj/%.o : %.c
+$(c_objects) : obj/%.o: %.c
+	$(info Creating Dir $(dir $@))
+	@$(MKDIR)
 	$(info Compiling $<)
-	@$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<
+	@$(CC) $(CCFLAGS) -c -o $@ $<
+
+#$(c_objects) : obj/%.o : %.c
+#	$(info Compiling $<)	
+#	@$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<
 
 $(s_objects): obj/%.o : %.s
 	$(info Assembling $<)
